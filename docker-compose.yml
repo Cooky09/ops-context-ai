@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: ai-ops-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ai_operations
+      POSTGRES_USER: ai_ops
+      POSTGRES_PASSWORD: ai_ops_dev_password
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ai_ops -d ai_operations"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+
+    container_name: ai-ops-backend
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      DATABASE_URL: postgresql://ai_ops:ai_ops_dev_password@postgres:5432/ai_operations
+      OLLAMA_HOST: http://host.docker.internal:11434
+      OLLAMA_LLM_MODEL: llama3.2:1b
+      OLLAMA_EMBEDDING_MODEL: nomic-embed-text
+
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+
+    container_name: ai-ops-frontend
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
