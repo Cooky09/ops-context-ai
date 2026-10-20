@@ -693,7 +693,3 @@ The project is actively structured for further development and experimentation.
 
 ---
 
-
-## License
-
-This project is intended as a portfolio and learning project.
